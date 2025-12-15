@@ -1,43 +1,40 @@
-// app/api/reminders/route.ts
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Lesson from '@/models/Lesson';
 import { sendTelegramMessage } from '@/lib/telegram';
 
-// Массив дней для конвертации JS Date (0-6) в твои названия
 const DAYS_MAP = [
   'Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'
 ];
 
 export async function GET(req: Request) {
   try {
-    // Простая защита, чтобы кто попало не вызывал этот адрес
+    // 1. Проверка ключа
     const { searchParams } = new URL(req.url);
     const key = searchParams.get('key');
+    
+    // ВАЖНО: Проверь, что в Vercel Environment Variables ключ называется CRON_SECRET
     if (key !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Неверный ключ (Unauthorized)' }, { status: 401 });
     }
 
     await dbConnect();
 
     const now = new Date();
-    now.setHours(now.getHours() + 1); 
+    
+    const serverTimeUTC = now.toISOString();
+    const YOUR_OFFSET = 1; 
+    now.setHours(now.getHours() + YOUR_OFFSET);
 
-    // Добавляем 10 минут
     now.setMinutes(now.getMinutes() + 10);
 
-    // 2. Форматируем время в строку "HH:MM" (например, "09:00")
     const targetTime = now.toLocaleTimeString('ru-RU', {
       hour: '2-digit',
       minute: '2-digit',
     });
 
-    // 3. Получаем текущий день недели
     const currentDay = DAYS_MAP[now.getDay()];
 
-    console.log(`Checking reminders for: ${currentDay} at ${targetTime}`);
-
-    // 4. Ищем уроки, которые начинаются ровно через 10 минут
     const lessons = await Lesson.find({
       day: currentDay,
       startTime: targetTime,
@@ -45,23 +42,25 @@ export async function GET(req: Request) {
 
     if (lessons.length > 0) {
       for (const lesson of lessons) {
-        const message = `
-🏃‍♂️ <b>Через 10 минут пара!</b>
-
-📚 <b>Предмет:</b> ${lesson.title}
-🚪 <b>Аудитория:</b> ${lesson.room}
-👨‍🏫 <b>Препод:</b> ${lesson.teacher}
-ℹ️ <b>Тип:</b> ${lesson.type}
-        `;
+        const message = `🔔 <b>Напоминание!</b>\n\nЧерез 10 минут (${lesson.startTime}):\n<b>${lesson.title}</b> в ${lesson.room}`;
         await sendTelegramMessage(message);
       }
-      return NextResponse.json({ ok: true, sent: lessons.length });
     }
 
-    return NextResponse.json({ ok: true, sent: 0 });
+    return NextResponse.json({
+      status: 'success',
+      debug: {
+        serverTimeUTC: serverTimeUTC,
+        yourTimeOffset: YOUR_OFFSET,
+        calculatedTimeWithOffset: now.toString(),
+        lookingForDay: currentDay,
+        lookingForTime: targetTime,
+        lessonsFoundCount: lessons.length,
+        lessonsFound: lessons 
+      }
+    });
 
   } catch (error) {
-    console.error('Reminder Error:', error);
-    return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Ошибка сервера', details: error }, { status: 500 });
   }
 }
