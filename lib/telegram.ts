@@ -1,28 +1,39 @@
 
+
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+const CHAT_ID = '-1003687270384'; 
 
 export async function sendTelegramMessage(text: string) {
-  if (!TELEGRAM_TOKEN || !CHAT_ID) {
-    console.warn("Telegram credentials not found. Notification skipped.");
+  console.log("🚀 Пытаюсь отправить сообщение в:", CHAT_ID); // Лог перед отправкой
+
+  if (!TELEGRAM_TOKEN) {
+    console.error("❌ Нет токена бота!");
     return;
   }
 
   try {
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
     
-    await fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: CHAT_ID,
         text: text,
         parse_mode: 'HTML',
       }),
     });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error("❌ ОШИБКА ТЕЛЕГРАМА:", JSON.stringify(data, null, 2));
+    } else {
+      console.log("✅ Сообщение успешно ушло!");
+    }
+
   } catch (error) {
-    console.error("Failed to send Telegram notification:", error);
+    console.error("❌ Ошибка сети:", error);
   }
 }
