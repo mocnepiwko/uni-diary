@@ -5,7 +5,7 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = '-1003687270384'; 
 
 export async function sendTelegramMessage(text: string) {
-  console.log("🚀 Пытаюсь отправить сообщение в:", CHAT_ID); // Лог перед отправкой
+  console.log("🚀 Пытаюсь отправить сообщение в:", CHAT_ID); 
 
   if (!TELEGRAM_TOKEN) {
     console.error("❌ Нет токена бота!");

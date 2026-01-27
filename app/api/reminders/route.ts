@@ -9,11 +9,9 @@ const DAYS_MAP = [
 
 export async function GET(req: Request) {
   try {
-    // 1. Проверка ключа
     const { searchParams } = new URL(req.url);
     const key = searchParams.get('key');
     
-    // ВАЖНО: Проверь, что в Vercel Environment Variables ключ называется CRON_SECRET
     if (key !== process.env.CRON_SECRET) {
       return NextResponse.json({ error: 'Неверный ключ (Unauthorized)' }, { status: 401 });
     }
